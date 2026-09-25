@@ -6,10 +6,12 @@ import {
   SkipForward,
   SkipBack,
   Shuffle,
-  Code2,
   Search,
   GitBranch,
   ArrowLeftRight,
+  GitMerge,
+  Network,
+  Code2,
 } from "lucide-react";
 import { bubbleSort, mergeSort, binarySearch, bfs, dfs } from "./algorithms";
 import { graphData } from "./graphData";
@@ -68,10 +70,10 @@ const ALGORITHMS = [
 
 const ALGORITHM_ICONS = {
   "bubble-sort": ArrowLeftRight,
-  "merge-sort": Code2,
+  "merge-sort": GitMerge,
   "binary-search": Search,
   bfs: GitBranch,
-  dfs: Code2,
+  dfs: Network,
 };
 
 const SORT_SIZE = 20;
