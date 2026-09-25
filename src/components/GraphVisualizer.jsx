@@ -10,23 +10,12 @@ export default function GraphVisualizer({ step, graph }) {
   // AUDIO
   // ==================================================
 
-  const compareAudio = useRef(null);
-  const swapAudio = useRef(null);
+  const compareAudio = useRef(new Audio(compareSound));
+  const swapAudio = useRef(new Audio(swapSound));
 
   useEffect(() => {
-    compareAudio.current = new Audio(compareSound);
-    swapAudio.current = new Audio(swapSound);
-
     compareAudio.current.volume = 0.5;
     swapAudio.current.volume = 0.6;
-
-    return () => {
-      compareAudio.current?.pause();
-      swapAudio.current?.pause();
-
-      compareAudio.current = null;
-      swapAudio.current = null;
-    };
   }, []);
 
   // ==================================================
@@ -36,44 +25,22 @@ export default function GraphVisualizer({ step, graph }) {
   useEffect(() => {
     if (!step || !message) return;
 
-    // Visiting a node
+    // Visiting a node -> compare sound
     if (message.startsWith("Visiting node")) {
-      if (compareAudio.current) {
-        compareAudio.current.pause();
-        compareAudio.current.currentTime = 0;
-
-        compareAudio.current.play().catch(() => {});
-      }
+      compareAudio.current.pause();
+      compareAudio.current.currentTime = 0;
+      compareAudio.current.play().catch(() => {});
     }
 
-    // BFS: discovering neighbors
-    if (message.startsWith("Discovered neighbors")) {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
-    }
-
-    // DFS: pushing neighbors
-    if (message.startsWith("Pushing neighbors")) {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
-    }
-
-    // Target found
-    if (message.startsWith("Found target")) {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
+    // Discovering / pushing neighbors -> swap sound
+    if (
+      message.startsWith("Discovered neighbors") ||
+      message.startsWith("Pushing neighbors") ||
+      message.startsWith("Found target")
+    ) {
+      swapAudio.current.pause();
+      swapAudio.current.currentTime = 0;
+      swapAudio.current.play().catch(() => {});
     }
   }, [step, message]);
 

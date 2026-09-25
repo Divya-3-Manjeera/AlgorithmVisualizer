@@ -53,27 +53,16 @@ export default function SearchVisualizer({ step }) {
   // AUDIO REFERENCES
   // ==================================================
 
-  const compareAudio = useRef(null);
-  const swapAudio = useRef(null);
+  const compareAudio = useRef(new Audio(compareSound));
+  const swapAudio = useRef(new Audio(swapSound));
 
   // ==================================================
-  // CREATE AUDIO OBJECTS
+  // AUDIO VOLUME
   // ==================================================
 
   useEffect(() => {
-    compareAudio.current = new Audio(compareSound);
-    swapAudio.current = new Audio(swapSound);
-
     compareAudio.current.volume = 0.5;
     swapAudio.current.volume = 0.6;
-
-    return () => {
-      compareAudio.current?.pause();
-      swapAudio.current?.pause();
-
-      compareAudio.current = null;
-      swapAudio.current = null;
-    };
   }, []);
 
   // ==================================================
@@ -83,36 +72,22 @@ export default function SearchVisualizer({ step }) {
   useEffect(() => {
     if (!step) return;
 
-    // ----------------------------------------------
-    // CHECKING MIDDLE ELEMENT
-    // compare.mp3
-    // ----------------------------------------------
-
+    // Checking middle element -> compare.mp3
     if (
       step.mid !== undefined &&
       step.mid !== -1 &&
       step.found !== true
     ) {
-      if (compareAudio.current) {
-        compareAudio.current.pause();
-        compareAudio.current.currentTime = 0;
-
-        compareAudio.current.play().catch(() => {});
-      }
+      compareAudio.current.pause();
+      compareAudio.current.currentTime = 0;
+      compareAudio.current.play().catch(() => {});
     }
 
-    // ----------------------------------------------
-    // TARGET FOUND
-    // swap.mp3
-    // ----------------------------------------------
-
+    // Target found -> swap.mp3
     if (step.found === true) {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
+      swapAudio.current.pause();
+      swapAudio.current.currentTime = 0;
+      swapAudio.current.play().catch(() => {});
     }
   }, [step]);
 
