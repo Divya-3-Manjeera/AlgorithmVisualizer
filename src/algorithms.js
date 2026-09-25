@@ -77,414 +77,252 @@ export function bubbleSort(input) {
 // ======================================================
 // MERGE SORT
 // ======================================================
-
 export function mergeSort(input) {
   const arr = [...input];
   const steps = [];
   const n = arr.length;
 
-  function addStep(
-    message,
-    phase,
-    activeRanges = [],
-    comparingRanges = [],
-    mergedRanges = []
-  ) {
-    const states = new Array(n).fill("default");
-    const highlights = [];
+  // Initial state
+  steps.push({
+    array: [...arr],
+    states: Array(n).fill("default"),
+    highlights: [],
+    phase: "START",
+    ranges: [[0, n - 1]],
+    comparingRanges: [],
+    mergedRanges: [],
+    message: "Starting Merge Sort",
+  });
 
-    // Show all active subarrays
-    activeRanges.forEach(([start, end]) => {
-      for (let i = start; i <= end; i++) {
-        states[i] = "pivot";
-      }
-    });
+  // =====================================================
+  // DIVIDE PHASE
+  // =====================================================
 
-    // Show all currently comparing ranges
-    comparingRanges.forEach(([start, end]) => {
-      for (let i = start; i <= end; i++) {
-        states[i] = "comparing";
-        highlights.push(i);
-      }
-    });
+  let levels = [[[0, n - 1]]];
 
-    // Show all completed merged ranges
-    mergedRanges.forEach(([start, end]) => {
-      for (let i = start; i <= end; i++) {
-        states[i] = "sorted";
+  while (true) {
+    const currentLevel = levels[levels.length - 1];
+    const nextLevel = [];
+
+    for (const [start, end] of currentLevel) {
+      if (start === end) {
+        nextLevel.push([start, end]);
+        continue;
       }
-    });
+
+      const mid = Math.floor((start + end) / 2);
+
+      nextLevel.push([start, mid]);
+      nextLevel.push([mid + 1, end]);
+    }
+
+    levels.push(nextLevel);
 
     steps.push({
       array: [...arr],
-      states,
-      highlights,
-      message,
-      phase,
-      activeRanges: [...activeRanges],
-      comparingRanges: [...comparingRanges],
-      mergedRanges: [...mergedRanges],
-    });
-  }
-
-  // ==================================================
-  // START
-  // ==================================================
-
-  addStep(
-    `Starting Merge Sort with [${arr.join(", ")}]`,
-    "START",
-    [[0, n - 1]]
-  );
-
-  // ==================================================
-  // DIVIDE VISUALIZATION
-  // Show ALL splits at the same level
-  // ==================================================
-
-  let ranges = [[0, n - 1]];
-
-  while (ranges.length > 0) {
-    const nextRanges = [];
-
-    ranges.forEach(([start, end]) => {
-      if (start < end) {
-        const mid = Math.floor((start + end) / 2);
-
-        nextRanges.push([start, mid]);
-        nextRanges.push([mid + 1, end]);
-      } else {
-        nextRanges.push([start, end]);
-      }
+      states: Array(n).fill("default"),
+      highlights: [],
+      phase: "DIVIDE",
+      ranges: nextLevel,
+      comparingRanges: [],
+      mergedRanges: [],
+      message: "Divide into smaller subarrays",
     });
 
-    const splitRanges = [];
-
-    ranges.forEach(([start, end]) => {
-      if (start < end) {
-        const mid = Math.floor((start + end) / 2);
-
-        splitRanges.push([start, mid]);
-        splitRanges.push([mid + 1, end]);
-      }
-    });
-
-    if (splitRanges.length === 0) {
-      break;
-    }
-
-    addStep(
-      `Divide into ${splitRanges.length} subarrays`,
-      "DIVIDE",
-      splitRanges
+    const finished = nextLevel.every(
+      ([start, end]) => start === end
     );
 
-    ranges = splitRanges;
+    if (finished) break;
   }
 
-  // ==================================================
-  // RESET ARRAY
-  // ==================================================
-
-  const original = [...input];
-
-  for (let i = 0; i < n; i++) {
-    arr[i] = original[i];
-  }
-
-  // ==================================================
-  // BOTTOM-UP MERGE SORT
-  //
-  // This is important:
-  //
-  // Every independent pair at the same level
-  // is processed simultaneously.
-  // ==================================================
+  // =====================================================
+  // CONQUER / MERGE PHASE
+  // =====================================================
 
   let width = 1;
 
   while (width < n) {
-    const mergeGroups = [];
+    const levelRanges = [];
 
-    // -----------------------------------------------
-    // Create ALL pairs/groups for this level
-    // -----------------------------------------------
+    // Get all subarrays that exist at this level
+    for (let start = 0; start < n; start += width * 2) {
+      const end = Math.min(start + width * 2 - 1, n - 1);
+
+      levelRanges.push([start, end]);
+    }
+
+    // -------------------------------------------------
+    // COMPARE
+    // -------------------------------------------------
+
+    steps.push({
+      array: [...arr],
+      states: Array(n).fill("default"),
+      highlights: [],
+      phase: "COMPARE",
+      ranges: levelRanges,
+      comparingRanges: levelRanges,
+      mergedRanges: [],
+      message: "Compare subarrays",
+    });
+
+    // -------------------------------------------------
+    // MERGE EACH PAIR
+    // -------------------------------------------------
 
     for (let start = 0; start < n; start += width * 2) {
-      const mid = Math.min(
-        start + width - 1,
-        n - 1
-      );
+      const mid = Math.min(start + width - 1, n - 1);
+      const end = Math.min(start + width * 2 - 1, n - 1);
 
-      const end = Math.min(
-        start + width * 2 - 1,
-        n - 1
-      );
+      // No right half
+      if (mid >= end) {
+        continue;
+      }
 
-      if (mid < end) {
-        mergeGroups.push({
-          start,
-          mid,
-          end,
-          left: arr.slice(start, mid + 1),
-          right: arr.slice(mid + 1, end + 1),
-          i: 0,
-          j: 0,
-          k: start,
-          result: [],
+      const left = arr.slice(start, mid + 1);
+      const right = arr.slice(mid + 1, end + 1);
+
+      let i = 0;
+      let j = 0;
+      let k = start;
+
+      // -----------------------------------------------
+      // Compare elements
+      // -----------------------------------------------
+
+      while (i < left.length && j < right.length) {
+        const leftIndex = start + i;
+        const rightIndex = mid + 1 + j;
+
+        const states = Array(n).fill("default");
+
+        states[leftIndex] = "comparing";
+        states[rightIndex] = "comparing";
+
+        steps.push({
+          array: [...arr],
+          states,
+          highlights: [leftIndex, rightIndex],
+          phase: "COMPARE",
+          ranges: levelRanges,
+          comparingRanges: [[start, end]],
+          mergedRanges: [],
+          message: `Compare ${left[i]} and ${right[j]}`,
         });
+
+        // ---------------------------------------------
+        // Place smaller element
+        // ---------------------------------------------
+
+        if (left[i] <= right[j]) {
+          arr[k] = left[i];
+          i++;
+        } else {
+          arr[k] = right[j];
+          j++;
+        }
+
+        const mergeStates = Array(n).fill("default");
+        mergeStates[k] = "swapping";
+
+        steps.push({
+          array: [...arr],
+          states: mergeStates,
+          highlights: [k],
+          phase: "MERGE",
+          ranges: levelRanges,
+          comparingRanges: [],
+          mergedRanges: [[start, k]],
+          message: `Place ${arr[k]}`,
+        });
+
+        k++;
       }
+
+      // -----------------------------------------------
+      // Remaining left elements
+      // -----------------------------------------------
+
+      while (i < left.length) {
+        arr[k] = left[i];
+
+        const states = Array(n).fill("default");
+        states[k] = "swapping";
+
+        steps.push({
+          array: [...arr],
+          states,
+          highlights: [k],
+          phase: "MERGE",
+          ranges: levelRanges,
+          comparingRanges: [],
+          mergedRanges: [[start, k]],
+          message: `Place ${arr[k]}`,
+        });
+
+        i++;
+        k++;
+      }
+
+      // -----------------------------------------------
+      // Remaining right elements
+      // -----------------------------------------------
+
+      while (j < right.length) {
+        arr[k] = right[j];
+
+        const states = Array(n).fill("default");
+        states[k] = "swapping";
+
+        steps.push({
+          array: [...arr],
+          states,
+          highlights: [k],
+          phase: "MERGE",
+          ranges: levelRanges,
+          comparingRanges: [],
+          mergedRanges: [[start, k]],
+          message: `Place ${arr[k]}`,
+        });
+
+        j++;
+        k++;
+      }
+
+      // -----------------------------------------------
+      // This pair is completely merged
+      // -----------------------------------------------
+
+      steps.push({
+        array: [...arr],
+        states: Array(n).fill("default"),
+        highlights: [],
+        phase: "MERGE",
+        ranges: levelRanges,
+        comparingRanges: [],
+        mergedRanges: [[start, end]],
+        message: `Merged [${start} - ${end}]`,
+      });
     }
-
-    if (mergeGroups.length === 0) {
-      break;
-    }
-
-    // -----------------------------------------------
-    // Show ALL merge pairs simultaneously
-    // -----------------------------------------------
-
-    const allComparingRanges = mergeGroups.flatMap(
-      (group) => [
-        [group.start, group.mid],
-        [group.mid + 1, group.end],
-      ]
-    );
-
-    addStep(
-      `Compare ${mergeGroups.length} pairs simultaneously`,
-      "COMPARE",
-      [],
-      allComparingRanges
-    );
-
-    // -----------------------------------------------
-    // Process all groups together
-    // -----------------------------------------------
-
-    let finished = false;
-
-    while (!finished) {
-      finished = true;
-
-      const comparingRanges = [];
-      const mergedRanges = [];
-
-      // ---------------------------------------------
-      // One merge operation for EACH group
-      // in this round
-      // ---------------------------------------------
-
-      mergeGroups.forEach((group) => {
-        const { left, right } = group;
-
-        if (
-          group.i < left.length &&
-          group.j < right.length
-        ) {
-          finished = false;
-
-          const leftIndex =
-            group.start + group.i;
-
-          const rightIndex =
-            group.mid + 1 + group.j;
-
-          comparingRanges.push([
-            leftIndex,
-            leftIndex,
-          ]);
-
-          comparingRanges.push([
-            rightIndex,
-            rightIndex,
-          ]);
-        }
-      });
-
-      // ---------------------------------------------
-      // Show all comparisons simultaneously
-      // ---------------------------------------------
-
-      if (comparingRanges.length > 0) {
-        addStep(
-          `Comparing elements from all pairs`,
-          "COMPARE",
-          [],
-          comparingRanges
-        );
-      }
-
-      // ---------------------------------------------
-      // Place ONE element from every active pair
-      // ---------------------------------------------
-
-      const placementRanges = [];
-
-      mergeGroups.forEach((group) => {
-        const { left, right } = group;
-
-        if (
-          group.i < left.length &&
-          group.j < right.length
-        ) {
-          const leftValue = left[group.i];
-          const rightValue = right[group.j];
-
-          if (leftValue <= rightValue) {
-            arr[group.k] = leftValue;
-
-            placementRanges.push([
-              group.start + group.i,
-              group.start + group.i,
-            ]);
-
-            group.i++;
-          } else {
-            arr[group.k] = rightValue;
-
-            placementRanges.push([
-              group.mid + 1 + group.j,
-              group.mid + 1 + group.j,
-            ]);
-
-            group.j++;
-          }
-
-          group.result.push(arr[group.k]);
-          group.k++;
-        }
-      });
-
-      // ---------------------------------------------
-      // Sound = MERGE
-      // ---------------------------------------------
-
-      if (placementRanges.length > 0) {
-        addStep(
-          `Place selected elements from all pairs`,
-          "MERGE",
-          [],
-          placementRanges
-        );
-      }
-
-      // ---------------------------------------------
-      // Copy remaining LEFT values
-      // from all groups simultaneously
-      // ---------------------------------------------
-
-      const remainingLeft = [];
-
-      mergeGroups.forEach((group) => {
-        if (
-          group.i < group.left.length &&
-          group.j >= group.right.length
-        ) {
-          finished = false;
-
-          const index =
-            group.start + group.i;
-
-          arr[group.k] = group.left[group.i];
-
-          remainingLeft.push([index, index]);
-
-          group.result.push(arr[group.k]);
-
-          group.i++;
-          group.k++;
-        }
-      });
-
-      if (remainingLeft.length > 0) {
-        addStep(
-          `Copy remaining left elements`,
-          "MERGE",
-          [],
-          remainingLeft
-        );
-      }
-
-      // ---------------------------------------------
-      // Copy remaining RIGHT values
-      // from all groups simultaneously
-      // ---------------------------------------------
-
-      const remainingRight = [];
-
-      mergeGroups.forEach((group) => {
-        if (
-          group.j < group.right.length &&
-          group.i >= group.left.length
-        ) {
-          finished = false;
-
-          const index =
-            group.mid + 1 + group.j;
-
-          arr[group.k] = group.right[group.j];
-
-          remainingRight.push([index, index]);
-
-          group.result.push(arr[group.k]);
-
-          group.j++;
-          group.k++;
-        }
-      });
-
-      if (remainingRight.length > 0) {
-        addStep(
-          `Copy remaining right elements`,
-          "MERGE",
-          [],
-          remainingRight
-        );
-      }
-    }
-
-    // -----------------------------------------------
-    // All groups at this level are now merged
-    // -----------------------------------------------
-
-    const completedRanges = mergeGroups.map(
-      (group) => [group.start, group.end]
-    );
-
-    addStep(
-      `Merged ${completedRanges.length} groups simultaneously`,
-      "MERGED",
-      [],
-      [],
-      completedRanges
-    );
 
     width *= 2;
   }
 
-  // ==================================================
+  // =====================================================
   // COMPLETE
-  // ==================================================
+  // =====================================================
 
-  for (let i = 0; i < n - 1; i++) {
-    for (let j = 0; j < n - i - 1; j++) {
-      if (arr[j] > arr[j + 1]) {
-        [arr[j], arr[j + 1]] = [
-          arr[j + 1],
-          arr[j],
-        ];
-      }
-    }
-  }
-
-  addStep(
-    `Merge Sort complete → [${arr.join(", ")}]`,
-    "COMPLETE",
-    [],
-    [],
-    [[0, n - 1]]
-  );
+  steps.push({
+    array: [...arr],
+    states: Array(n).fill("sorted"),
+    highlights: [],
+    phase: "COMPLETE",
+    ranges: [[0, n - 1]],
+    comparingRanges: [],
+    mergedRanges: [[0, n - 1]],
+    message: "Merge Sort complete",
+  });
 
   return steps;
 }

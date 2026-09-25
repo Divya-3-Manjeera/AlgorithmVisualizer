@@ -5,16 +5,11 @@ import swapSound from "../sounds/swap.mp3";
 
 const stateColors = {
   default: "bg-slate-600",
-
   comparing: "bg-amber-400",
   swapping: "bg-rose-500",
-
   sorted: "bg-emerald-500",
-
   pivot: "bg-cyan-400",
-
   found: "bg-emerald-400 ring-2 ring-emerald-200",
-
   visiting: "bg-amber-400",
   frontier: "bg-sky-400",
   visited: "bg-violet-400",
@@ -23,152 +18,130 @@ const stateColors = {
 };
 
 export default function ArrayVisualizer({ step, maxValue }) {
+  const {
+    array,
+    states,
+    highlights,
+    phase,
+    ranges = [],
+    comparingRanges = [],
+    mergedRanges = [],
+  } = step;
+
   const compareAudio = useRef(null);
   const swapAudio = useRef(null);
 
-  // --------------------------------------------------
-  // CREATE AUDIO OBJECTS
-  // --------------------------------------------------
-
+  // Create audio objects once
   useEffect(() => {
     compareAudio.current = new Audio(compareSound);
     swapAudio.current = new Audio(swapSound);
 
     compareAudio.current.volume = 0.5;
-    swapAudio.current.volume = 0.6;
+    swapAudio.current.volume = 0.5;
 
     return () => {
       compareAudio.current?.pause();
       swapAudio.current?.pause();
-
-      compareAudio.current = null;
-      swapAudio.current = null;
     };
   }, []);
 
-  // --------------------------------------------------
-  // PLAY SOUND BASED ON ALGORITHM PHASE
-  // --------------------------------------------------
+  // ==============================
+  // SOUND
+  // ==============================
 
   useEffect(() => {
     if (!step) return;
 
-    const phase = step.phase;
+    const message = step.message || "";
 
-    // -----------------------------------------------
-    // COMPARISON SOUND
-    // Bubble Sort comparison
-    // Merge Sort comparison
-    // -----------------------------------------------
+    let sound = null;
+
+    // ------------------------------
+    // BUBBLE SORT
+    // ------------------------------
+
+    if (message.startsWith("Comparing")) {
+      sound = compareAudio.current;
+    }
+
+    if (message.includes("so we swap them")) {
+      sound = swapAudio.current;
+    }
+
+    // ------------------------------
+    // MERGE SORT
+    // ------------------------------
+
+    if (phase === "DIVIDE") {
+      sound = compareAudio.current;
+    }
 
     if (phase === "COMPARE") {
-      if (compareAudio.current) {
-        compareAudio.current.pause();
-        compareAudio.current.currentTime = 0;
-
-        compareAudio.current.play().catch(() => {});
-      }
+      sound = compareAudio.current;
     }
 
-    // -----------------------------------------------
-    // ACTION SOUND
-    // Bubble Sort swap
-    // Merge Sort merge/place
-    // -----------------------------------------------
-
-    if (phase === "SWAP" || phase === "MERGE") {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
+    if (phase === "MERGE") {
+      sound = swapAudio.current;
     }
 
-    // -----------------------------------------------
-    // BINARY SEARCH
-    // Binary Search does not currently have a
-    // phase property in algorithms.js.
-    //
-    // So we detect its checking step.
-    // -----------------------------------------------
+    // Play selected sound
+    if (sound) {
+      sound.currentTime = 0;
 
-    if (
-      step.mid !== undefined &&
-      step.mid !== -1 &&
-      step.message?.startsWith("Checking middle index")
-    ) {
-      if (compareAudio.current) {
-        compareAudio.current.pause();
-        compareAudio.current.currentTime = 0;
-
-        compareAudio.current.play().catch(() => {});
-      }
+      sound.play().catch(() => {
+        // Browser may block audio until user interaction.
+      });
     }
-
-    // -----------------------------------------------
-    // BINARY SEARCH FOUND
-    // Use action sound when target is found.
-    // -----------------------------------------------
-
-    if (step.found === true) {
-      if (swapAudio.current) {
-        swapAudio.current.pause();
-        swapAudio.current.currentTime = 0;
-
-        swapAudio.current.play().catch(() => {});
-      }
-    }
-  }, [step]);
-
-  // --------------------------------------------------
-  // SAFETY CHECK
-  // --------------------------------------------------
-
-  if (!step || !step.array) {
-    return (
-      <div className="flex items-center justify-center h-full text-slate-400">
-        No visualization data
-      </div>
-    );
-  }
-
-  const { array, states = [], highlights = [] } = step;
+  }, [step, phase]);
 
   const n = array.length;
 
   const gap = n > 30 ? 2 : 4;
 
-  const barW = `calc((100% - ${
-    (n - 1) * gap
-  }px) / ${n})`;
+  const barW = `calc((100% - ${(n - 1) * gap}px) / ${n})`;
 
-  // --------------------------------------------------
-  // ARRAY VISUALIZATION
-  // --------------------------------------------------
+  const isInRange = (index, range) => {
+    return index >= range[0] && index <= range[1];
+  };
+
+  const isInRanges = (index, rangeList) => {
+    return rangeList.some((range) => isInRange(index, range));
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
 
-      
-
-      {/* ---------------------------------------------
-          ARRAY
-      --------------------------------------------- */}
-
+      {/* EXISTING BARS */}
       <div className="flex items-end justify-center gap-1 h-full w-full px-4 pb-2">
 
         {array.map((value, i) => {
-          const heightPct =
-            maxValue > 0
-              ? (value / maxValue) * 100
-              : 0;
+          const heightPct = (value / maxValue) * 100;
 
-          const isHighlighted =
-            highlights.includes(i);
+          const isHighlighted = highlights.includes(i);
 
-          const state =
-            states[i] ?? "default";
+          let barColor = stateColors[states[i] ?? "default"];
+
+          // Merge Sort highlighting only
+          if (
+            phase === "DIVIDE" &&
+            isInRanges(i, ranges)
+          ) {
+            barColor = "bg-cyan-400";
+          }
+
+          if (
+            phase === "COMPARE" &&
+            isInRanges(i, comparingRanges)
+          ) {
+            barColor = "bg-amber-400";
+          }
+
+          if (
+            phase === "MERGE" &&
+            isInRanges(i, mergedRanges)
+          ) {
+            barColor = "bg-emerald-500";
+          }
 
           return (
             <div
@@ -179,8 +152,6 @@ export default function ArrayVisualizer({ step, maxValue }) {
                 height: `${heightPct}%`,
               }}
             >
-
-              {/* VALUE */}
               <span
                 className={`text-[10px] font-mono mb-1 transition-opacity duration-200 ${
                   isHighlighted || n <= 20
@@ -191,25 +162,93 @@ export default function ArrayVisualizer({ step, maxValue }) {
                 {value}
               </span>
 
-              {/* BAR */}
               <div
                 className={`w-full rounded-t-md transition-all duration-300 ease-out ${
-                  stateColors[state]
+                  barColor
                 } ${
                   isHighlighted
                     ? "ring-2 ring-white/60 scale-y-105"
                     : ""
                 }`}
-                style={{
-                  height: "100%",
-                }}
+                style={{ height: "100%" }}
               />
-
             </div>
           );
         })}
-
       </div>
+
+      {/* MERGE SORT DIVIDE / CONQUER INDICATOR */}
+      {phase && ranges.length > 0 && (
+        <div className="px-4 pb-2">
+
+          <div className="flex w-full">
+
+            {ranges.map(([start, end], index) => {
+              const width =
+                ((end - start + 1) / n) * 100;
+
+              return (
+                <div
+                  key={`${start}-${end}-${index}`}
+                  className="flex justify-center"
+                  style={{
+                    width: `${width}%`,
+                  }}
+                >
+                  <div
+                    className={`
+                      w-[90%]
+                      h-1
+                      rounded-full
+                      transition-all
+                      duration-300
+                      ${
+                        phase === "DIVIDE"
+                          ? "bg-cyan-400"
+                          : phase === "COMPARE"
+                          ? "bg-amber-400"
+                          : phase === "MERGE"
+                          ? "bg-emerald-400"
+                          : "bg-slate-500"
+                      }
+                    `}
+                  />
+                </div>
+              );
+            })}
+
+          </div>
+
+          <div className="text-center text-xs font-bold mt-1">
+
+            {phase === "DIVIDE" && (
+              <span className="text-cyan-400">
+                DIVIDE
+              </span>
+            )}
+
+            {phase === "COMPARE" && (
+              <span className="text-amber-400">
+                COMPARE
+              </span>
+            )}
+
+            {phase === "MERGE" && (
+              <span className="text-emerald-400">
+                CONQUER → MERGE
+              </span>
+            )}
+
+            {phase === "COMPLETE" && (
+              <span className="text-emerald-400">
+                SORTED
+              </span>
+            )}
+
+          </div>
+
+        </div>
+      )}
 
     </div>
   );
