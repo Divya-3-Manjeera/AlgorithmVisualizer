@@ -6,7 +6,7 @@ const stateLabels = [
   { state: "current", label: "Current" },
   { state: "found", label: "Found" },
   { state: "visiting", label: "Visiting" },
-  { state: "frontier", label: "Frontier / Queue" },
+  { state: "frontier", label: "Frontier" },
   { state: "visited", label: "Visited" },
   { state: "path", label: "Path" },
   { state: "pivot", label: "Merge Element" },
