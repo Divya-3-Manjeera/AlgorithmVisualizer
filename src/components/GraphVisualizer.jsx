@@ -1,11 +1,96 @@
+import { useEffect, useRef } from "react";
+
+import compareSound from "../sounds/compare.mp3";
+import swapSound from "../sounds/swap.mp3";
+
 export default function GraphVisualizer({ step, graph }) {
-  const { visited, frontier, current, path, edges } = step;
+  const { visited, frontier, current, path, edges, message } = step;
+
+  // ==================================================
+  // AUDIO
+  // ==================================================
+
+  const compareAudio = useRef(null);
+  const swapAudio = useRef(null);
+
+  useEffect(() => {
+    compareAudio.current = new Audio(compareSound);
+    swapAudio.current = new Audio(swapSound);
+
+    compareAudio.current.volume = 0.5;
+    swapAudio.current.volume = 0.6;
+
+    return () => {
+      compareAudio.current?.pause();
+      swapAudio.current?.pause();
+
+      compareAudio.current = null;
+      swapAudio.current = null;
+    };
+  }, []);
+
+  // ==================================================
+  // BFS / DFS SOUND
+  // ==================================================
+
+  useEffect(() => {
+    if (!step || !message) return;
+
+    // Visiting a node
+    if (message.startsWith("Visiting node")) {
+      if (compareAudio.current) {
+        compareAudio.current.pause();
+        compareAudio.current.currentTime = 0;
+
+        compareAudio.current.play().catch(() => {});
+      }
+    }
+
+    // BFS: discovering neighbors
+    if (message.startsWith("Discovered neighbors")) {
+      if (swapAudio.current) {
+        swapAudio.current.pause();
+        swapAudio.current.currentTime = 0;
+
+        swapAudio.current.play().catch(() => {});
+      }
+    }
+
+    // DFS: pushing neighbors
+    if (message.startsWith("Pushing neighbors")) {
+      if (swapAudio.current) {
+        swapAudio.current.pause();
+        swapAudio.current.currentTime = 0;
+
+        swapAudio.current.play().catch(() => {});
+      }
+    }
+
+    // Target found
+    if (message.startsWith("Found target")) {
+      if (swapAudio.current) {
+        swapAudio.current.pause();
+        swapAudio.current.currentTime = 0;
+
+        swapAudio.current.play().catch(() => {});
+      }
+    }
+  }, [step, message]);
+
+  // ==================================================
+  // ORIGINAL GRAPH LOGIC
+  // ==================================================
+
   const visitedSet = new Set(visited);
   const frontierSet = new Set(frontier);
   const pathSet = new Set(path);
-  const activeEdgeSet = new Set(edges.map(([a, b]) => `${a}-${b}`));
+
+  const activeEdgeSet = new Set(
+    edges.map(([a, b]) => `${a}-${b}`)
+  );
 
   const nodeRadius = 24;
+
   const edgeColor = (a, b) =>
     activeEdgeSet.has(`${a}-${b}`)
       ? "#fbbf24"
@@ -29,14 +114,23 @@ export default function GraphVisualizer({ step, graph }) {
     return "#64748b";
   };
 
+  // ==================================================
+  // ORIGINAL UI
+  // ==================================================
+
   return (
     <div className="flex items-center justify-center h-full w-full">
-      <svg viewBox="0 0 500 400" className="w-full h-full max-w-3xl">
+      <svg
+        viewBox="0 0 500 400"
+        className="w-full h-full max-w-3xl"
+      >
         {graph.adjacencyList.map((neighbors, i) =>
           neighbors.map((j) => {
             if (j <= i) return null;
+
             const a = graph.positions[i];
             const b = graph.positions[j];
+
             return (
               <line
                 key={`${i}-${j}`}
@@ -45,14 +139,22 @@ export default function GraphVisualizer({ step, graph }) {
                 x2={b.x}
                 y2={b.y}
                 stroke={edgeColor(i, j)}
-                strokeWidth={activeEdgeSet.has(`${i}-${j}`) ? 4 : 2}
+                strokeWidth={
+                  activeEdgeSet.has(`${i}-${j}`)
+                    ? 4
+                    : 2
+                }
                 className="transition-all duration-300"
               />
             );
           })
         )}
+
         {graph.positions.map((pos, id) => (
-          <g key={id} className="transition-all duration-300">
+          <g
+            key={id}
+            className="transition-all duration-300"
+          >
             <circle
               cx={pos.x}
               cy={pos.y}
@@ -62,6 +164,7 @@ export default function GraphVisualizer({ step, graph }) {
               strokeWidth={3}
               className="transition-all duration-300"
             />
+
             <text
               x={pos.x}
               y={pos.y + 5}
